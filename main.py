@@ -2,9 +2,21 @@ import inspect
 import collections.abc
 
 
+class InvalidContract(Exception):
+    pass
+
+
+def handle_invalid_contract(var, value, conditions):
+    raise InvalidContract('{var}: {value} , {conditions}'.format(var=var,
+                                                                 value=value,
+                                                                 conditions=conditions))
+
+
 def check_contracts(contract):
     """
-    :param contract: Mapping object between variable definitions and expected values.
+    :param contract: Mapping object between variable definitions and expected conditions.
+    variable definition must be defined.
+    conditions must be callable objects.
     """
     def decorator_v(funky):
         def handle(*args, **kwargs):
@@ -14,22 +26,33 @@ def check_contracts(contract):
             for var, conditions in contract.items():
                 if isinstance(conditions, collections.abc.Iterable):
                     if not all([condition(params[var]) for condition in conditions]):
-                        raise RuntimeError('Invalid contract') # todo return failed condition , Contract Runtime Error
+                        handle_invalid_contract(var=var, value=params[var], conditions=conditions)
                 else:
                     if not conditions(params[var]):
-                        raise RuntimeError('Invalid contract') # todo return failed condition , Contract Runtime Error
+                        handle_invalid_contract(var=var, value=params[var], conditions=conditions)
             return funky(*args, **kwargs)
+
         return handle
+
     return decorator_v
 
-
-@check_contracts({'a': lambda x: x  is not None ,
-                  'args':lambda x: x is not None,
-                  'b': [lambda x: x<=2,lambda x:x >0]})
-def funky_args(a, b, c, *args, d, e=0):
-    print(a, b, c)
-
-
-
-
-funky_args(1,3,3,d=4)
+# check positional
+# check positional with keyword calls
+# check positional with multi-args
+# check positional with keyword calls and multi-contract
+#
+# check positional and keywords
+# check positional and keywords with keyword calls
+# check positional and keywords with multi-args
+# check positional and keywords with keyword calls and multi-contract
+#
+# check with *args
+# check with **kwargs
+# check with user types
+# check with base types
+# check with python functions
+# check with partials
+#
+# check runtime with large arrays / numpy arrays
+# check runtime for small args
+# check runtime for strings
