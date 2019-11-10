@@ -8,11 +8,11 @@ from main import check_contracts
 def positional(a, b):
     print(a, b)
 
+
 @check_contracts({'a': lambda x: x is not None,
                   'b': lambda x: isinstance(x, str)})
 def positional_single_restriction(a, b):
     print(a, b)
-
 
 
 def test_positional_expected():
@@ -116,12 +116,14 @@ def test_positional_single_breaking_both_conditions_mixed_calls():
     with pytest.raises(Exception):
         positional_single_restriction(None, b=1)
 
+
 @check_contracts({'a': [lambda x: x is not None,
                         lambda x: x > 5],
                   'b': lambda x: isinstance(x, str),
                   'args': lambda x: x is not None})
 def positional_with_variable(a, b, *args):
     print(a, b, args)
+
 
 @check_contracts({'args': lambda x: all(item > 5 for item in x)})
 def positional_arg_value_query(a, b, *args):
@@ -142,7 +144,7 @@ def test_positional_with_variable_args_failure():
         positional_arg_value_query(10, 'foo', 3, 4, 5, 6, 7)
 
 
-@check_contracts({'args': lambda x: not x ,
+@check_contracts({'args': lambda x: not x,
                   'c': lambda x: x > 5})
 def positional_and_keywords(a, b, *args, c):
     print(a, b, args, c)
@@ -171,41 +173,79 @@ def test_positional_and_keywords_failure_two():
         positional_and_keywords(a=1, b=2, c=2)
 
 
+@check_contracts({'a': lambda a: a is not None,
+                  'c': lambda c: c < 0,
+                  'kwargs': [lambda x: x,
+                             lambda x: all(item > 5 for item in x.values())]})
 def positional_with_kwargs(a, b, *args, c, **kwargs):
     print(a, b, args, c, kwargs)
 
 
+def test_positional_with_kwargs():
+    positional_with_kwargs(5, 6, c=-1, d=7)
 
 
+def test_positional_with_kwargs_failing():
+    with pytest.raises(Exception):
+        positional_with_kwargs(5, 6, c=-1, d=4)
 
-def positional_with_only_kwargs(a, b, **kwargs):
-    print(a, b, kwargs)
 
-
-def keywords_only(*, a, b):
+@check_contracts({'a': lambda a: a > 4,
+                  'b': lambda b: b > 10})
+def keywords_only(*, a, b=7):
     print(a, b)
 
 
+def test_keywords_only():
+    keywords_only(a=5, b=11)
+    with pytest.raises(Exception):
+        keywords_only(a=1, b=12)
+
+
+def test_invalid_default():
+    with pytest.raises(Exception):
+        keywords_only(a=7)
+
+
 class UserT:
+    @check_contracts({'a': lambda a: a > 7})
     def __init__(self, a):
         self.a = a
 
+    @check_contracts({'args': lambda x: all(item > 7 for item in x),
+                      'kwargs': lambda p: all(item < 0 for item in p.values())})
     def __call__(self, *args, **kwargs):
         print('called')
 
+    @check_contracts({'b': lambda a: a > 7})
     def foo(self, b):
         return self.a + b
 
 
+def test_user_type_constuctor():
+    valid = UserT(10)
+    with pytest.raises(Exception):
+        invalid = UserT(5)
 
-# check with **kwargs
-# check with user types
-# check with base types
-# check with python functions
-# check with partials
-#
-# check useable on user class functions
 
+def test_user_type_member():
+    valid = UserT(10)
+    assert valid.foo(10) == 20
+    with pytest.raises(Exception):
+        valid = UserT(10)
+        invalid_call = valid.foo(0)
+
+
+def test_user_type_call():
+    valid = UserT(10)
+    valid(10, 11, 12, a=-1, b=-7, c=-10)
+    with pytest.raises(Exception):
+        valid(1, 2, 3)
+    with pytest.raises(Exception):
+        valid(10, 11, 12, a=1, b=2)
+
+
+# todo
 # check runtime with large arrays / numpy arrays
 # check runtime for small args
 # check runtime for strings
